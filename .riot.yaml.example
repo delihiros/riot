@@ -1,0 +1,7 @@
+riot:
+  api_key: RGAPI-XXXXXXXX
+
+test:
+  puuid: ICDeuPk7eXXXXXXXX
+  game_name: USERNAME
+  tag_line: 1234
