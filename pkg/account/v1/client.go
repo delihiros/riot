@@ -16,7 +16,7 @@ func New(c *client.Client) *Client {
 }
 
 func (c *Client) GetAccountByPUUID(region string, puuid string) (*AccountDto, error) {
-	res, err := c.c.Get(region, "/riot/account/v1/accounts/by-puuid/"+puuid)
+	res, err := c.c.SimpleGet(region, "/riot/account/v1/accounts/by-puuid/"+puuid)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func (c *Client) GetAccountByPUUID(region string, puuid string) (*AccountDto, er
 }
 
 func (c *Client) GetAccountByRiotID(region string, gameName string, tagLine string) (*AccountDto, error) {
-	res, err := c.c.Get(region, "/riot/account/v1/accounts/by-riot-id/"+gameName+"/"+tagLine)
+	res, err := c.c.SimpleGet(region, "/riot/account/v1/accounts/by-riot-id/"+gameName+"/"+tagLine)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (c *Client) GetAccountByRiotID(region string, gameName string, tagLine stri
 }
 
 func (c *Client) GetActiveShard(region string, game string, puuid string) (*ActiveShardDto, error) {
-	res, err := c.c.Get(region, "/riot/account/v1/active-shards/by-game/"+game+"/by-puuid/"+puuid)
+	res, err := c.c.SimpleGet(region, "/riot/account/v1/active-shards/by-game/"+game+"/by-puuid/"+puuid)
 	if err != nil {
 		return nil, err
 	}

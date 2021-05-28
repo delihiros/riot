@@ -17,7 +17,7 @@ func New(c *client.Client) *Client {
 
 func (c *Client) GetMatchByID(region string, matchID string) (*MatchDto, error) {
 	url := "/val/match/v1/matches/" + matchID
-	res, err := c.c.Get(region, url)
+	res, err := c.c.SimpleGet(region, url)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func (c *Client) GetMatchByID(region string, matchID string) (*MatchDto, error) 
 
 func (c *Client) GetMatchListByPUUID(region string, puuid string) (*MatchListDto, error) {
 	url := "/val/match/v1/matchlists/by-puuid/" + puuid
-	res, err := c.c.Get(region, url)
+	res, err := c.c.SimpleGet(region, url)
 	if err != nil {
 		return nil, err
 	}
