@@ -17,7 +17,7 @@ func New(c *client.Client) *Client {
 
 func (c *Client) GetContent(region string, locale string) (*ContentDto, error) {
 	url := "/val/content/v1/contents" + c.c.MakeQueryString(map[string]string{"locale": locale})
-	res, err := c.c.Get(region, url)
+	res, err := c.c.SimpleGet(region, url)
 	if err != nil {
 		return nil, err
 	}

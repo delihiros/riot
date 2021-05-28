@@ -16,7 +16,7 @@ func New(c *client.Client) *Client {
 }
 
 func (c *Client) GetStatus(region string) (*PlatformDataDto, error) {
-	res, err := c.c.Get(region, "/val/status/v1/platform-data")
+	res, err := c.c.SimpleGet(region, "/val/status/v1/platform-data")
 	if err != nil {
 		return nil, err
 	}
