@@ -2,7 +2,7 @@ package v1
 
 type MatchDto struct {
 	Metadata *MetadataDto `json:"metadata"`
-	Info     *InfoDto     `json:"metadata"`
+	Info     *InfoDto     `json:"info"`
 }
 
 type MetadataDto struct {
@@ -14,8 +14,9 @@ type MetadataDto struct {
 type InfoDto struct {
 	GameMode         string       `json:"game_mode"`
 	GameType         string       `json:"game_type"`
-	GameStartTimeUTC string       `json:"game_start_time_utc"` // TODO: should be converted to time.Time... or not?
+	GameStartTimeUTC string       `json:"game_start_time_utc"`
 	GameVersion      string       `json:"game_version"`
+	GameFormat       string       `json:"game_format"`
 	Players          []*PlayerDto `json:"players"`
 	TotalTurnCount   int          `json:"total_turn_count"`
 }

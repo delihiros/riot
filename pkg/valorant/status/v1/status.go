@@ -2,7 +2,8 @@ package v1
 
 import (
 	"encoding/json"
-	"riot/pkg/client"
+
+	"github.com/delihiros/riot/pkg/client"
 )
 
 type Client struct {

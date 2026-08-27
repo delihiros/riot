@@ -5,3 +5,8 @@ type DeckDto struct {
 	Name string `json:"name"`
 	Code string `json:"code"`
 }
+
+type NewDeckDto struct {
+	Name string `json:"name"`
+	Code string `json:"code"`
+}

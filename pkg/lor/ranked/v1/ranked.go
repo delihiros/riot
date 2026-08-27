@@ -2,7 +2,8 @@ package v1
 
 import (
 	"encoding/json"
-	"riot/pkg/client"
+
+	"github.com/delihiros/riot/pkg/client"
 )
 
 type Client struct {
@@ -16,7 +17,7 @@ func New(c *client.Client) *Client {
 }
 
 func (c *Client) GetLeaderboards(region string) (*LeaderboardDto, error) {
-	res, err := c.c.GetWithHeaderParams("/lor/ranked/v1/leaderboards", map[string]string{"region": region})
+	res, err := c.c.SimpleGet(region, "/lor/ranked/v1/leaderboards")
 	if err != nil {
 		return nil, err
 	}

@@ -1,25 +1,30 @@
 package v1
 
+import "encoding/json"
+
 type MatchDto struct {
-	MatchInfo    *MatchInfoDto
-	Players      []*PlayerDto
-	Coaches      []*CoachDto
-	Teams        []*TeamDto
-	RoundResults []*RoundResultDto
+	MatchInfo    *MatchInfoDto     `json:"matchInfo"`
+	Players      []*PlayerDto      `json:"players"`
+	Coaches      []*CoachDto       `json:"coaches"`
+	Teams        []*TeamDto        `json:"teams"`
+	RoundResults []*RoundResultDto `json:"roundResults"`
 }
 
 type MatchInfoDto struct {
-	MatchID            string `json:"matchId"`
-	MapID              string `json:"mapId"`
-	GameLengthMillis   int    `json:"gameLengthMillis"`
-	GameStartMillis    int    `json:"gameStartMillis"`
-	ProvisioningFlowID string `json:"provisioningFlowId"`
-	IsCompleted        bool   `json:"isCompleted"`
-	CustomGameName     string `json:"customGameName"`
-	QueueID            string `json:"queueId"`
-	GameMode           string `json:"gameMode"`
-	IsRanked           bool   `json:"isRanked"`
-	SeasonID           string `json:"seasonId"`
+	MatchID            string            `json:"matchId"`
+	MapID              string            `json:"mapId"`
+	GameVersion        string            `json:"gameVersion"`
+	GameLengthMillis   int               `json:"gameLengthMillis"`
+	Region             string            `json:"region"`
+	GameStartMillis    int64             `json:"gameStartMillis"`
+	ProvisioningFlowID string            `json:"provisioningFlowId"`
+	IsCompleted        bool              `json:"isCompleted"`
+	CustomGameName     string            `json:"customGameName"`
+	QueueID            string            `json:"queueId"`
+	GameMode           string            `json:"gameMode"`
+	IsRanked           bool              `json:"isRanked"`
+	SeasonID           string            `json:"seasonId"`
+	PremierMatchInfo   []json.RawMessage `json:"premierMatchInfo"`
 }
 
 type PlayerDto struct {
@@ -31,8 +36,10 @@ type PlayerDto struct {
 	CharacterID     string          `json:"characterId"`
 	Stats           *PlayerStatsDto `json:"stats"`
 	CompetitiveTier int             `json:"competitiveTier"`
+	IsObserver      bool            `json:"isObserver"`
 	PlayerCard      string          `json:"playerCard"`
 	PlayerTitle     string          `json:"playerTitle"`
+	AccountLevel    int             `json:"accountLevel"`
 }
 
 type PlayerStatsDto struct {
@@ -70,6 +77,7 @@ type RoundResultDto struct {
 	RoundResult           string                 `json:"roundResult"`
 	RoundCeremony         string                 `json:"roundCeremony"`
 	WinningTeam           string                 `json:"winningTeam"`
+	WinningTeamRole       string                 `json:"winningTeamRole"`
 	BombPlanter           string                 `json:"bombPlanter"`
 	BombDefuser           string                 `json:"bombDefuser"`
 	PlantRoundTime        int                    `json:"plantRoundTime"`
@@ -91,7 +99,7 @@ type PlayerLocationsDto struct {
 
 type LocationDto struct {
 	X int `json:"x"`
-	Y int `json:"Y"`
+	Y int `json:"y"`
 }
 
 type PlayerRoundStatsDto struct {
@@ -144,12 +152,17 @@ type AbilityDto struct {
 }
 
 type MatchListDto struct {
-	PUUID   string `json:"puuid"`
-	History []*MatchListEntryDto
+	PUUID   string               `json:"puuid"`
+	History []*MatchListEntryDto `json:"history"`
 }
 
 type MatchListEntryDto struct {
-	MatchID             string `json:"matchID"`
-	GameStartTimeMillis int    `json:"gameStartTimeMillis"`
-	TeamID              string `json:"teamId"`
+	MatchID             string `json:"matchId"`
+	GameStartTimeMillis int64  `json:"gameStartTimeMillis"`
+	QueueID             string `json:"queueId"`
+}
+
+type RecentMatchesDto struct {
+	CurrentTime int64    `json:"currentTime"`
+	MatchIDs    []string `json:"matchIds"`
 }

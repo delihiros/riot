@@ -1,17 +1,17 @@
 package v1
 
 type LeaderboardDto struct {
-	shard        string       `json:"shard"`
-	actId        string       `json:"actId"`
-	totalPlayers int          `json:"totalPlayers"`
-	players      []*PlayerDto `json:"players"`
+	Shard        string       `json:"shard"`
+	ActID        string       `json:"actId"`
+	TotalPlayers int64        `json:"totalPlayers"`
+	Players      []*PlayerDto `json:"players"`
 }
 
 type PlayerDto struct {
 	PUUID           string `json:"puuid"`
 	GameName        string `json:"gameName"`
-	TagLine         string `json:"tabLine"`
-	LeaderboardRank int    `json:"leaderboardRank"`
-	RankedRating    int    `json:"rankedRating"`
-	NumberOfWins    int    `json:"numberOfWins"`
+	TagLine         string `json:"tagLine"`
+	LeaderboardRank int64  `json:"leaderboardRank"`
+	RankedRating    int64  `json:"rankedRating"`
+	NumberOfWins    int64  `json:"numberOfWins"`
 }

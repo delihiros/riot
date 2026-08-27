@@ -11,3 +11,9 @@ type ActiveShardDto struct {
 	Game        string `json:"game"`
 	ActiveShard string `json:"activeShard"`
 }
+
+type AccountRegionDto struct {
+	PUUID  string `json:"puuid"`
+	Game   string `json:"game"`
+	Region string `json:"region"`
+}

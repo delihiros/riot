@@ -1,7 +1,13 @@
 package main
 
-import "riot/cmd"
+import (
+	"os"
+
+	"github.com/delihiros/riot/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

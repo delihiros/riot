@@ -31,10 +31,10 @@ type ContentItemDto struct {
 }
 
 type ActDto struct {
-	Name           string
-	LocalizedNames *LocalizedNamesDto
-	ID             string
-	IsActive       bool
+	Name           string             `json:"name"`
+	LocalizedNames *LocalizedNamesDto `json:"localizedNames"`
+	ID             string             `json:"id"`
+	IsActive       bool               `json:"isActive"`
 }
 
 type ContentDto struct {
@@ -47,6 +47,7 @@ type ContentDto struct {
 	Equips       []*ContentItemDto `json:"equips"`
 	GameModes    []*ContentItemDto `json:"gameModes"`
 	Sprays       []*ContentItemDto `json:"sprays"`
+	SprayLevels  []*ContentItemDto `json:"sprayLevels"`
 	Charms       []*ContentItemDto `json:"charms"`
 	CharmLevels  []*ContentItemDto `json:"charmLevels"`
 	PlayerCards  []*ContentItemDto `json:"playerCards"`

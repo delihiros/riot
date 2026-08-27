@@ -1,9 +1,8 @@
 package config
 
 import (
-	"log"
+	"os"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
@@ -13,20 +12,24 @@ func GetConfig() *viper.Viper {
 	return config
 }
 
-func ReadConfig(cfgFile string) {
+func ReadConfig(cfgFile string) error {
 	config = viper.New()
+	if err := config.BindEnv("riot.api_key", "RIOT_API_KEY"); err != nil {
+		return err
+	}
 	if cfgFile != "" {
 		config.SetConfigFile(cfgFile)
 	} else {
-		home, err := homedir.Dir()
+		home, err := os.UserHomeDir()
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		config.AddConfigPath(home)
 		config.SetConfigName(".riot")
 	}
 	err := config.ReadInConfig()
-	if err != nil {
-		log.Fatal(err)
+	if _, ok := err.(viper.ConfigFileNotFoundError); cfgFile == "" && ok {
+		return nil
 	}
+	return err
 }

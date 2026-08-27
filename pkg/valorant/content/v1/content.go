@@ -2,7 +2,8 @@ package v1
 
 import (
 	"encoding/json"
-	"riot/pkg/client"
+
+	"github.com/delihiros/riot/pkg/client"
 )
 
 type Client struct {
@@ -16,8 +17,11 @@ func New(c *client.Client) *Client {
 }
 
 func (c *Client) GetContent(region string, locale string) (*ContentDto, error) {
-	url := "/val/content/v1/contents" + c.c.MakeQueryString(map[string]string{"locale": locale})
-	res, err := c.c.SimpleGet(region, url)
+	path := "/val/content/v1/contents"
+	if locale != "" {
+		path += c.c.MakeQueryString(map[string]string{"locale": locale})
+	}
+	res, err := c.c.SimpleGet(region, path)
 	if err != nil {
 		return nil, err
 	}

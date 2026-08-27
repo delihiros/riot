@@ -3,13 +3,12 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"riot/config"
-	"riot/pkg/client"
-	content "riot/pkg/valorant/content/v1"
-	match "riot/pkg/valorant/match/v1"
-	ranked "riot/pkg/valorant/ranked/v1"
-	status "riot/pkg/valorant/status/v1"
+
+	"github.com/delihiros/riot/pkg/client"
+	content "github.com/delihiros/riot/pkg/valorant/content/v1"
+	match "github.com/delihiros/riot/pkg/valorant/match/v1"
+	ranked "github.com/delihiros/riot/pkg/valorant/ranked/v1"
+	status "github.com/delihiros/riot/pkg/valorant/status/v1"
 
 	"github.com/spf13/cobra"
 )
@@ -19,9 +18,6 @@ var (
 		Use:   "valorant",
 		Short: "subcommand for valorant",
 		Long:  "subcommand for valorant",
-		Run: func(cmd *cobra.Command, args []string) {
-			config.ReadConfig("")
-		},
 	}
 
 	contentCmd = &cobra.Command{
@@ -33,18 +29,19 @@ var (
 		Use:   "get-content",
 		Short: "Get content optionally filtered by locale",
 		Long:  "Get content optionally filtered by locale",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			httpClient := client.New(apiKey)
 			c := content.New(httpClient)
 			dto, err := c.GetContent(region, locale)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			bytes, err := json.Marshal(dto)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
-			fmt.Printf(string(bytes))
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bytes))
+			return err
 		},
 	}
 
@@ -56,35 +53,55 @@ var (
 	matchByIDCmd = &cobra.Command{
 		Use:   "get-match",
 		Short: "Get match by id",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			httpClient := client.New(apiKey)
 			c := match.New(httpClient)
 			dto, err := c.GetMatchByID(region, matchID)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			bytes, err := json.Marshal(dto)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
-			fmt.Println(string(bytes))
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bytes))
+			return err
 		},
 	}
 	matchListByIDCmd = &cobra.Command{
 		Use:   "matchlist",
 		Short: "Get matchlist for games played by puuid",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			httpClient := client.New(apiKey)
 			c := match.New(httpClient)
 			dto, err := c.GetMatchListByPUUID(region, puuid)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			bytes, err := json.Marshal(dto)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
-			fmt.Println(string(bytes))
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bytes))
+			return err
+		},
+	}
+	recentMatchesCmd = &cobra.Command{
+		Use:   "recent-matches",
+		Short: "Get recent matches for a queue",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			httpClient := client.New(apiKey)
+			c := match.New(httpClient)
+			dto, err := c.GetRecentMatches(region, queue)
+			if err != nil {
+				return err
+			}
+			bytes, err := json.Marshal(dto)
+			if err != nil {
+				return err
+			}
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bytes))
+			return err
 		},
 	}
 
@@ -96,18 +113,19 @@ var (
 	leaderboardCmd = &cobra.Command{
 		Use:   "leaderboard",
 		Short: "Get leaderboard for the competitive queue",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			httpClient := client.New(apiKey)
 			c := ranked.New(httpClient)
 			dto, err := c.GetLeaderboard(region, actID, size, startIndex)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			bytes, err := json.Marshal(dto)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
-			fmt.Println(string(bytes))
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bytes))
+			return err
 		},
 	}
 
@@ -119,18 +137,19 @@ var (
 	getStatusCmd = &cobra.Command{
 		Use:   "get-status",
 		Short: "Get VALORANT status for the given platform.",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			httpClient := client.New(apiKey)
 			c := status.New(httpClient)
 			dto, err := c.GetStatus(region)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			bytes, err := json.Marshal(dto)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
-			fmt.Println(string(bytes))
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(bytes))
+			return err
 		},
 	}
 )

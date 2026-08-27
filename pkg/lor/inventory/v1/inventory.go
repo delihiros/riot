@@ -2,7 +2,8 @@ package v1
 
 import (
 	"encoding/json"
-	"riot/pkg/client"
+
+	"github.com/delihiros/riot/pkg/client"
 )
 
 type Client struct {
@@ -16,11 +17,11 @@ func New(c *client.Client) *Client {
 }
 
 func (c *Client) GetInventory(region string, authorization string) ([]*CardDto, error) {
-	res, err := c.c.GetWithHeaderParams("/lor/inventory/v1/cards/me", map[string]string{"Authorization": authorization, "region": region})
+	res, err := c.c.GetWithRegionAndHeaders(region, "/lor/inventory/v1/cards/me", map[string]string{"Authorization": authorization})
 	if err != nil {
 		return nil, err
 	}
 	var cd []*CardDto
-	err = json.Unmarshal(res, cd)
+	err = json.Unmarshal(res, &cd)
 	return cd, err
 }

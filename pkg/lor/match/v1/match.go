@@ -2,7 +2,9 @@ package v1
 
 import (
 	"encoding/json"
-	"riot/pkg/client"
+	"net/url"
+
+	"github.com/delihiros/riot/pkg/client"
 )
 
 type Client struct {
@@ -16,19 +18,19 @@ func New(c *client.Client) *Client {
 }
 
 func (c *Client) GetMatchListByPUUID(region string, puuid string) ([]string, error) {
-	url := "/lor/match/v1/matches/by-puuid/" + puuid + "/ids"
-	res, err := c.c.GetWithHeaderParams(url, map[string]string{"region": region})
+	path := "/lor/match/v1/matches/by-puuid/" + url.PathEscape(puuid) + "/ids"
+	res, err := c.c.SimpleGet(region, path)
 	if err != nil {
 		return nil, err
 	}
 	var matchIDs []string
-	err = json.Unmarshal(res, matchIDs) // TODO: need verification
+	err = json.Unmarshal(res, &matchIDs)
 	return matchIDs, err
 }
 
 func (c *Client) GetMatchByID(region string, matchID string) (*MatchDto, error) {
-	url := "/lor/match/v1/matches/" + matchID
-	res, err := c.c.GetWithHeaderParams(url, map[string]string{"region": region})
+	path := "/lor/match/v1/matches/" + url.PathEscape(matchID)
+	res, err := c.c.SimpleGet(region, path)
 	if err != nil {
 		return nil, err
 	}

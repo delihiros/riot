@@ -2,7 +2,8 @@ package v1
 
 import (
 	"encoding/json"
-	"riot/pkg/client"
+
+	"github.com/delihiros/riot/pkg/client"
 )
 
 type Client struct {
@@ -16,7 +17,7 @@ func New(c *client.Client) *Client {
 }
 
 func (c *Client) GetStatus(region string) (*PlatformDataDto, error) {
-	res, err := c.c.GetWithHeaderParams("/lor/status/v1/platform-data", map[string]string{"region": region})
+	res, err := c.c.SimpleGet(region, "/lor/status/v1/platform-data")
 	if err != nil {
 		return nil, err
 	}
