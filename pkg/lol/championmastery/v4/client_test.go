@@ -137,6 +137,43 @@ func TestClientChampionMasteryReturnsJSONDecodeError(t *testing.T) {
 	}
 }
 
+func TestClientChampionMasterySliceEndpointsReturnNilOnPartialDecodeError(t *testing.T) {
+	partialJSON := "[" + masteryJSON + `,{"championId":"not-a-number"}]`
+	tests := []struct {
+		name string
+		get  func(*Client) ([]ChampionMasteryDto, error)
+	}{
+		{
+			name: "all",
+			get: func(c *Client) ([]ChampionMasteryDto, error) {
+				return c.GetAllChampionMasteriesByPUUID("na1", "player")
+			},
+		},
+		{
+			name: "top",
+			get: func(c *Client) ([]ChampionMasteryDto, error) {
+				return c.GetTopChampionMasteriesByPUUID("na1", "player", nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpClient := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(partialJSON))}, nil
+			})}
+
+			masteries, err := tt.get(New(client.NewWithHTTPClient("test-key", httpClient)))
+			if err == nil {
+				t.Fatal("expected partial JSON decode error")
+			}
+			if masteries != nil {
+				t.Fatalf("masteries = %#v, want nil on decode error", masteries)
+			}
+		})
+	}
+}
+
 func TestClientChampionMasteryReturnsSharedHTTPError(t *testing.T) {
 	httpClient := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: http.StatusForbidden, Status: "403 Forbidden", Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"status":"forbidden"}`))}, nil

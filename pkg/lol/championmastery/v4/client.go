@@ -19,7 +19,10 @@ func New(c *client.Client) *Client {
 func (c *Client) GetAllChampionMasteriesByPUUID(region string, puuid string) ([]ChampionMasteryDto, error) {
 	var masteries []ChampionMasteryDto
 	err := c.get(region, "/lol/champion-mastery/v4/champion-masteries/by-puuid/"+url.PathEscape(puuid), &masteries)
-	return masteries, err
+	if err != nil {
+		return nil, err
+	}
+	return masteries, nil
 }
 
 func (c *Client) GetChampionMasteryByPUUID(region string, puuid string, championID int64) (*ChampionMasteryDto, error) {
@@ -38,7 +41,10 @@ func (c *Client) GetTopChampionMasteriesByPUUID(region string, puuid string, cou
 	}
 	var masteries []ChampionMasteryDto
 	err := c.get(region, path, &masteries)
-	return masteries, err
+	if err != nil {
+		return nil, err
+	}
+	return masteries, nil
 }
 
 func (c *Client) GetChampionMasteryScoreByPUUID(region string, puuid string) (int, error) {
