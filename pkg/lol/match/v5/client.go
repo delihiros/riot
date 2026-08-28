@@ -67,6 +67,14 @@ func (c *Client) GetReplay(region, puuid string) (*ReplayDTO, error) {
 	return &replay, nil
 }
 
+func (c *Client) GetMatch(region, matchID string) (*MatchDto, error) {
+	var match MatchDto
+	if err := c.get(region, "/lol/match/v5/matches/"+url.PathEscape(matchID), &match); err != nil {
+		return nil, err
+	}
+	return &match, nil
+}
+
 func (c *Client) get(region, path string, dst any) error {
 	res, err := c.c.SimpleGet(region, path)
 	if err != nil {
