@@ -1,9 +1,12 @@
 package client
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -12,6 +15,240 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 	return f(r)
+}
+
+func TestSimpleWritesSendAuthenticatedJSONRequests(t *testing.T) {
+	body := []byte{0, '"', '\n', 0xff}
+	for _, tt := range []struct {
+		name   string
+		method string
+		write  func(*Client) ([]byte, error)
+	}{
+		{"post", http.MethodPost, func(c *Client) ([]byte, error) {
+			return c.SimplePost("na1", "/lol/example?queue=ranked&tag=a%2Fb", body)
+		}},
+		{"put", http.MethodPut, func(c *Client) ([]byte, error) {
+			return c.SimplePut("na1", "/lol/example?queue=ranked&tag=a%2Fb", body)
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				if r.Method != tt.method {
+					t.Errorf("method = %q, want %q", r.Method, tt.method)
+				}
+				if got := r.URL.String(); got != "https://na1.api.riotgames.com/lol/example?queue=ranked&tag=a%2Fb" {
+					t.Errorf("URL = %q", got)
+				}
+				gotBody, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(gotBody, body) {
+					t.Errorf("body = %v, want %v", gotBody, body)
+				}
+				if got := r.Header.Values("X-Riot-Token"); !reflect.DeepEqual(got, []string{"secret"}) {
+					t.Errorf("X-Riot-Token = %q, want [secret]", got)
+				}
+				if got := r.Header.Values("Content-Type"); !reflect.DeepEqual(got, []string{"application/json"}) {
+					t.Errorf("Content-Type = %q, want [application/json]", got)
+				}
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Status:     "200 OK",
+					Body:       io.NopCloser(bytes.NewReader([]byte{0xfe, 0, 1})),
+					Header:     make(http.Header),
+				}, nil
+			})}
+
+			got, err := tt.write(NewWithHTTPClient("secret", httpClient))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := []byte{0xfe, 0, 1}; !bytes.Equal(got, want) {
+				t.Errorf("response = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestWritesWithRegionAndHeadersPreserveCallerRequest(t *testing.T) {
+	body := []byte("request body")
+	for _, tt := range []struct {
+		name   string
+		method string
+		write  func(*Client, map[string]string) ([]byte, error)
+	}{
+		{"post", http.MethodPost, func(c *Client, headers map[string]string) ([]byte, error) {
+			return c.PostWithRegionAndHeaders("euw1", "/lor/deck/v1/decks/me?existing=yes", headers, body)
+		}},
+		{"put", http.MethodPut, func(c *Client, headers map[string]string) ([]byte, error) {
+			return c.PutWithRegionAndHeaders("euw1", "/lor/deck/v1/decks/me?existing=yes", headers, body)
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			headers := map[string]string{
+				"Authorization": "Bearer player",
+				"Content-Type":  "application/custom+json",
+				"X-Custom":      "value",
+			}
+			wantHeaders := map[string]string{
+				"Authorization": "Bearer player",
+				"Content-Type":  "application/custom+json",
+				"X-Custom":      "value",
+			}
+			httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				if r.Method != tt.method {
+					t.Errorf("method = %q, want %q", r.Method, tt.method)
+				}
+				if got := r.URL.String(); got != "https://euw1.api.riotgames.com/lor/deck/v1/decks/me?existing=yes" {
+					t.Errorf("URL = %q", got)
+				}
+				gotBody, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(gotBody, body) {
+					t.Errorf("body = %q, want %q", gotBody, body)
+				}
+				if len(r.Header) != len(wantHeaders) {
+					t.Errorf("headers = %v, want exactly %v", r.Header, wantHeaders)
+				}
+				for key, want := range wantHeaders {
+					if got := r.Header.Get(key); got != want {
+						t.Errorf("%s = %q, want %q", key, got, want)
+					}
+				}
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Status:     "200 OK",
+					Body:       http.NoBody,
+					Header:     make(http.Header),
+				}, nil
+			})}
+
+			if _, err := tt.write(NewWithHTTPClient("unused", httpClient), headers); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(headers, wantHeaders) {
+				t.Errorf("caller headers mutated: got %v, want %v", headers, wantHeaders)
+			}
+		})
+	}
+}
+
+func TestSimplePutNilBodySendsZeroBytes(t *testing.T) {
+	httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(body) != 0 || r.ContentLength != 0 {
+			t.Errorf("body = %q, content length = %d; want zero bytes", body, r.ContentLength)
+		}
+		return &http.Response{StatusCode: http.StatusNoContent, Status: "204 No Content", Body: http.NoBody, Header: make(http.Header)}, nil
+	})}
+
+	if _, err := NewWithHTTPClient("secret", httpClient).SimplePut("na1", "/lol/example", nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSimpleWritesRejectInvalidRiotDestinationBeforeRoundTrip(t *testing.T) {
+	calls := 0
+	httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		calls++
+		return nil, errors.New("request must not be sent")
+	})}
+	for _, tt := range []struct {
+		name  string
+		write func(*Client, string, string) ([]byte, error)
+	}{
+		{"post", func(c *Client, region, path string) ([]byte, error) { return c.SimplePost(region, path, nil) }},
+		{"put", func(c *Client, region, path string) ([]byte, error) { return c.SimplePut(region, path, nil) }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewWithHTTPClient("secret", httpClient)
+			if _, err := tt.write(c, "attacker.example/x", "/lol/example"); err == nil {
+				t.Error("expected invalid routing error")
+			}
+			for _, path := range []string{"https://attacker.example/x", "//attacker.example/x", "lol/example"} {
+				if _, err := tt.write(c, "na1", path); err == nil {
+					t.Errorf("path %q: expected invalid path error", path)
+				}
+			}
+		})
+	}
+	if calls != 0 {
+		t.Fatalf("HTTP calls = %d, want 0", calls)
+	}
+}
+
+func TestSimplePostRejectsRedirectWithoutForwardingCredentialsOrBody(t *testing.T) {
+	calls := 0
+	httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		calls++
+		if calls > 1 {
+			t.Fatalf("redirected request forwarded to %s", r.URL)
+		}
+		return &http.Response{
+			StatusCode: http.StatusTemporaryRedirect,
+			Status:     "307 Temporary Redirect",
+			Header:     http.Header{"Location": []string{"https://attacker.example/collect"}},
+			Body:       http.NoBody,
+			Request:    r,
+		}, nil
+	})}
+
+	_, err := NewWithHTTPClient("secret", httpClient).SimplePost("na1", "/lol/example", []byte("sensitive"))
+	var responseErr *HTTPError
+	if !errors.As(err, &responseErr) || responseErr.StatusCode != http.StatusTemporaryRedirect {
+		t.Fatalf("error = %v, want HTTP 307", err)
+	}
+	if calls != 1 {
+		t.Fatalf("HTTP calls = %d, want 1", calls)
+	}
+}
+
+func TestSimpleWritesPreserveHTTPErrorAndRateLimitBehavior(t *testing.T) {
+	calls := 0
+	httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		calls++
+		return &http.Response{
+			StatusCode: http.StatusTooManyRequests,
+			Status:     "429 Too Many Requests",
+			Header:     http.Header{"Retry-After": []string{"60"}},
+			Body:       io.NopCloser(bytes.NewReader([]byte("limited"))),
+		}, nil
+	})}
+	c := NewWithHTTPClient("secret", httpClient)
+
+	_, err := c.SimplePost("na1", "/lol/example", nil)
+	var responseErr *HTTPError
+	if !errors.As(err, &responseErr) {
+		t.Fatalf("error = %v, want *HTTPError", err)
+	}
+	if responseErr.StatusCode != http.StatusTooManyRequests || responseErr.RetryAfter != 60*time.Second || !bytes.Equal(responseErr.Body, []byte("limited")) {
+		t.Errorf("HTTP error = %+v", responseErr)
+	}
+	_, err = c.SimplePut("na1", "/lol/example", nil)
+	if !errors.As(err, &responseErr) || responseErr.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("rate-limited error = %v, want HTTP 429", err)
+	}
+	if calls != 1 {
+		t.Fatalf("HTTP calls = %d, want 1", calls)
+	}
+}
+
+func TestSimplePutPreservesTransportError(t *testing.T) {
+	wantErr := errors.New("round trip failed")
+	httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return nil, wantErr
+	})}
+
+	_, err := NewWithHTTPClient("secret", httpClient).SimplePut("na1", "/lol/example", nil)
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("error = %v, want wrapped %v", err, wantErr)
+	}
 }
 
 func TestSimpleGetRejectsInvalidRegionBeforeSendingAPIKey(t *testing.T) {

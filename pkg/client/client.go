@@ -73,12 +73,34 @@ func (c *Client) GetWithRegionAndHeaders(region string, path string, params map[
 	return c.GetWithHeaderParams(requestingURL, params)
 }
 
+func (c *Client) SimplePost(region, path string, body []byte) ([]byte, error) {
+	return c.PostWithRegionAndHeaders(region, path, map[string]string{
+		"X-Riot-Token": c.apiKey,
+		"Content-Type": "application/json",
+	}, body)
+}
+
 func (c *Client) PostWithRegionAndHeaders(region string, path string, params map[string]string, body []byte) ([]byte, error) {
+	return c.requestWithRegionAndHeaders(http.MethodPost, region, path, params, body)
+}
+
+func (c *Client) SimplePut(region, path string, body []byte) ([]byte, error) {
+	return c.PutWithRegionAndHeaders(region, path, map[string]string{
+		"X-Riot-Token": c.apiKey,
+		"Content-Type": "application/json",
+	}, body)
+}
+
+func (c *Client) PutWithRegionAndHeaders(region, path string, params map[string]string, body []byte) ([]byte, error) {
+	return c.requestWithRegionAndHeaders(http.MethodPut, region, path, params, body)
+}
+
+func (c *Client) requestWithRegionAndHeaders(method, region, path string, params map[string]string, body []byte) ([]byte, error) {
 	requestingURL, err := riotAPIURL(region, path)
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPost, requestingURL, bytes.NewReader(body))
+	req, err := http.NewRequest(method, requestingURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
