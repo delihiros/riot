@@ -13,7 +13,8 @@ The following APIs are supported:
   - [x] CLI, including recent matches
 - [x] VALORANT Console Match and Ranked clients
 - [x] Account API, including Riot Sign On (RSO) `/riot/account/v1/accounts/me`
-- [ ] LoL API
+- [x] LoL API
+  - [x] Standard, Match/RSO, and Tournament clients are supported
 - [x] LoR Deck, Inventory, Match, Ranked, and Status clients
 
 ## Install the CLI
