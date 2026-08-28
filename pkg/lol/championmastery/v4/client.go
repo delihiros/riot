@@ -25,7 +25,10 @@ func (c *Client) GetAllChampionMasteriesByPUUID(region string, puuid string) ([]
 func (c *Client) GetChampionMasteryByPUUID(region string, puuid string, championID int64) (*ChampionMasteryDto, error) {
 	var mastery ChampionMasteryDto
 	err := c.get(region, "/lol/champion-mastery/v4/champion-masteries/by-puuid/"+url.PathEscape(puuid)+"/by-champion/"+strconv.FormatInt(championID, 10), &mastery)
-	return &mastery, err
+	if err != nil {
+		return nil, err
+	}
+	return &mastery, nil
 }
 
 func (c *Client) GetTopChampionMasteriesByPUUID(region string, puuid string, count *int) ([]ChampionMasteryDto, error) {

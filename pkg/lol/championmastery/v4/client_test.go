@@ -23,6 +23,12 @@ func TestClientChampionMasteryEndpoints(t *testing.T) {
 	var requests []*http.Request
 	httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		requests = append(requests, r)
+		if r.Method != http.MethodGet {
+			t.Fatalf("method = %q, want GET", r.Method)
+		}
+		if r.URL.Host != "na1.api.riotgames.com" {
+			t.Fatalf("host = %q, want na1.api.riotgames.com", r.URL.Host)
+		}
 		if got := r.Header.Get("X-Riot-Token"); got != "test-key" {
 			t.Fatalf("X-Riot-Token = %q, want test-key", got)
 		}
@@ -122,9 +128,12 @@ func TestClientChampionMasteryReturnsJSONDecodeError(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(strings.NewReader("{"))}, nil
 	})}
 
-	_, err := New(client.NewWithHTTPClient("test-key", httpClient)).GetAllChampionMasteriesByPUUID("na1", "player")
+	mastery, err := New(client.NewWithHTTPClient("test-key", httpClient)).GetChampionMasteryByPUUID("na1", "player", 266)
 	if err == nil {
 		t.Fatal("expected malformed JSON error")
+	}
+	if mastery != nil {
+		t.Fatalf("mastery = %#v, want nil on decode error", mastery)
 	}
 }
 
