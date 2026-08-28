@@ -242,6 +242,82 @@ func TestClientGetMatchReturnsNilOnRequestError(t *testing.T) {
 	}
 }
 
+func TestClientGetTimeline(t *testing.T) {
+	fixture := completeTimelineFixture(t)
+	httpClient := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		assertRequest(t, r, "/lol/match/v5/matches/ASIA_1%2F%20special/timeline")
+		if r.URL.RawQuery != "" {
+			t.Fatalf("query = %q, want empty", r.URL.RawQuery)
+		}
+		return response(http.StatusOK, "200 OK", fixture), nil
+	})}
+
+	got, err := New(client.NewWithHTTPClient("test-key", httpClient)).GetTimeline("asia", "ASIA_1/ special")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertSameJSON(t, got, fixture)
+}
+
+func TestTimelineResponseWireSchemas(t *testing.T) {
+	assertWireSchema(t, reflect.TypeFor[TimelineDto](), timelineSchema)
+	assertWireSchema(t, reflect.TypeFor[MetadataTimeLineDto](), metadataTimelineSchema)
+	assertWireSchema(t, reflect.TypeFor[InfoTimeLineDto](), infoTimelineSchema)
+	assertWireSchema(t, reflect.TypeFor[ParticipantTimeLineDto](), participantTimelineSchema)
+	assertWireSchema(t, reflect.TypeFor[FramesTimeLineDto](), framesTimelineSchema)
+	assertWireSchema(t, reflect.TypeFor[EventsTimeLineDto](), eventsTimelineSchema)
+	assertWireSchema(t, reflect.TypeFor[ParticipantFrameDto](), participantFrameSchema)
+	assertWireSchema(t, reflect.TypeFor[ChampionStatsDto](), championStatsSchema)
+	assertWireSchema(t, reflect.TypeFor[DamageStatsDto](), damageStatsSchema)
+	assertWireSchema(t, reflect.TypeFor[PositionDto](), positionSchema)
+}
+
+func TestClientGetTimelineReturnsNilOnPartialDecodeError(t *testing.T) {
+	httpClient := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return response(http.StatusOK, "200 OK", `{"metadata":{"dataVersion":"2"},"info":{"gameId":"invalid"}}`), nil
+	})}
+
+	got, err := New(client.NewWithHTTPClient("test-key", httpClient)).GetTimeline("asia", "ASIA_1")
+	if err == nil {
+		t.Fatal("expected partial JSON decode error")
+	}
+	if got != nil {
+		t.Fatalf("timeline = %#v, want nil on decode error", got)
+	}
+}
+
+func TestClientGetTimelineReturnsSharedHTTPError(t *testing.T) {
+	const body = `{"status":"not found"}`
+	httpClient := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return response(http.StatusNotFound, "404 Not Found", body), nil
+	})}
+
+	got, err := New(client.NewWithHTTPClient("test-key", httpClient)).GetTimeline("asia", "ASIA_1")
+	if got != nil {
+		t.Fatalf("timeline = %#v, want nil on HTTP error", got)
+	}
+	var responseErr *client.HTTPError
+	if !errors.As(err, &responseErr) {
+		t.Fatalf("error = %v, want *client.HTTPError", err)
+	}
+	if responseErr.StatusCode != http.StatusNotFound {
+		t.Fatalf("status code = %d, want %d", responseErr.StatusCode, http.StatusNotFound)
+	}
+	if string(responseErr.Body) != body {
+		t.Fatalf("body = %q, want %q", responseErr.Body, body)
+	}
+}
+
+func TestClientGetTimelineReturnsNilOnRequestError(t *testing.T) {
+	got, err := New(client.NewWithHTTPClient("test-key", http.DefaultClient)).GetTimeline("not/a/region", "ASIA_1")
+	if err == nil {
+		t.Fatal("expected request error")
+	}
+	if got != nil {
+		t.Fatalf("timeline = %#v, want nil on request error", got)
+	}
+}
+
 type wireField struct {
 	goName string
 	json   string
@@ -335,7 +411,53 @@ func completeMatchFixture(t *testing.T) string {
 	return string(body)
 }
 
+func completeTimelineFixture(t *testing.T) string {
+	t.Helper()
+	championStats := fixtureObjectAt(championStatsSchema, nil, 100)
+	damageStats := fixtureObjectAt(damageStatsSchema, nil, 200)
+	position := fixtureObjectAt(positionSchema, nil, 300)
+	participantFrame := fixtureObjectAt(participantFrameSchema, map[string]any{
+		"championStats": championStats,
+		"damageStats":   damageStats,
+		"position":      position,
+	}, 400)
+	fixture := map[string]any{
+		"metadata": map[string]any{
+			"dataVersion":  "2",
+			"matchId":      "ASIA_1/ special",
+			"participants": []any{"participant-puuid"},
+		},
+		"info": map[string]any{
+			"endOfGameResult": "GameComplete",
+			"frameInterval":   int64(60001),
+			"gameId":          int64(12345678901),
+			"participants": []any{map[string]any{
+				"participantId": 1,
+				"puuid":         "participant-puuid",
+			}},
+			"frames": []any{map[string]any{
+				"events": []any{map[string]any{
+					"timestamp":     int64(61001),
+					"realTimestamp": int64(1700000000002),
+					"type":          "GAME_END",
+				}},
+				"participantFrames": map[string]any{"1": participantFrame},
+				"timestamp":         62003,
+			}},
+		},
+	}
+	body, err := json.Marshal(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(body)
+}
+
 func fixtureObject(fields []wireField, replacements map[string]any) map[string]any {
+	return fixtureObjectAt(fields, replacements, 1000)
+}
+
+func fixtureObjectAt(fields []wireField, replacements map[string]any, base int) map[string]any {
 	object := make(map[string]any, len(fields))
 	for i, field := range fields {
 		if replacement, ok := replacements[field.json]; ok {
@@ -344,15 +466,15 @@ func fixtureObject(fields []wireField, replacements map[string]any) map[string]a
 		}
 		switch field.typeOf {
 		case "int", "int64":
-			object[field.json] = 1000 + i
+			object[field.json] = base + i
 		case "float64":
-			object[field.json] = float64(1000+i) + 0.25
+			object[field.json] = float64(base+i) + 0.25
 		case "bool":
 			object[field.json] = true
 		case "string":
 			object[field.json] = field.json + "-value"
 		case "[]int":
-			object[field.json] = []any{1000 + i, 2000 + i}
+			object[field.json] = []any{base + i, base + 1000 + i}
 		default:
 			panic("missing fixture replacement for " + field.goName + " " + field.typeOf)
 		}
@@ -381,6 +503,105 @@ func assertSameJSON(t *testing.T, got any, want string) {
 var matchSchema = schema(`
 Metadata metadata v5.MetadataDto
 Info info v5.InfoDto
+`)
+
+var timelineSchema = schema(`
+Metadata metadata v5.MetadataTimeLineDto
+Info info v5.InfoTimeLineDto
+`)
+
+var metadataTimelineSchema = schema(`
+DataVersion dataVersion string
+MatchID matchId string
+Participants participants []string
+`)
+
+var infoTimelineSchema = schema(`
+EndOfGameResult endOfGameResult string
+FrameInterval frameInterval int64
+GameID gameId int64
+Participants participants []v5.ParticipantTimeLineDto
+Frames frames []v5.FramesTimeLineDto
+`)
+
+var participantTimelineSchema = schema(`
+ParticipantID participantId int
+PUUID puuid string
+`)
+
+var framesTimelineSchema = schema(`
+Events events []v5.EventsTimeLineDto
+ParticipantFrames participantFrames map[string]v5.ParticipantFrameDto
+Timestamp timestamp int
+`)
+
+var eventsTimelineSchema = schema(`
+Timestamp timestamp int64
+RealTimestamp realTimestamp int64
+Type type string
+`)
+
+var participantFrameSchema = schema(`
+ChampionStats championStats v5.ChampionStatsDto
+CurrentGold currentGold int
+DamageStats damageStats v5.DamageStatsDto
+GoldPerSecond goldPerSecond int
+JungleMinionsKilled jungleMinionsKilled int
+Level level int
+MinionsKilled minionsKilled int
+ParticipantID participantId int
+Position position v5.PositionDto
+TimeEnemySpentControlled timeEnemySpentControlled int
+TotalGold totalGold int
+XP xp int
+`)
+
+var championStatsSchema = schema(`
+AbilityHaste abilityHaste int
+AbilityPower abilityPower int
+Armor armor int
+ArmorPen armorPen int
+ArmorPenPercent armorPenPercent int
+AttackDamage attackDamage int
+AttackSpeed attackSpeed int
+BonusArmorPenPercent bonusArmorPenPercent int
+BonusMagicPenPercent bonusMagicPenPercent int
+CCReduction ccReduction int
+CooldownReduction cooldownReduction int
+Health health int
+HealthMax healthMax int
+HealthRegen healthRegen int
+Lifesteal lifesteal int
+MagicPen magicPen int
+MagicPenPercent magicPenPercent int
+MagicResist magicResist int
+MovementSpeed movementSpeed int
+Omnivamp omnivamp int
+PhysicalVamp physicalVamp int
+Power power int
+PowerMax powerMax int
+PowerRegen powerRegen int
+SpellVamp spellVamp int
+`)
+
+var damageStatsSchema = schema(`
+MagicDamageDone magicDamageDone int
+MagicDamageDoneToChampions magicDamageDoneToChampions int
+MagicDamageTaken magicDamageTaken int
+PhysicalDamageDone physicalDamageDone int
+PhysicalDamageDoneToChampions physicalDamageDoneToChampions int
+PhysicalDamageTaken physicalDamageTaken int
+TotalDamageDone totalDamageDone int
+TotalDamageDoneToChampions totalDamageDoneToChampions int
+TotalDamageTaken totalDamageTaken int
+TrueDamageDone trueDamageDone int
+TrueDamageDoneToChampions trueDamageDoneToChampions int
+TrueDamageTaken trueDamageTaken int
+`)
+
+var positionSchema = schema(`
+X x int
+Y y int
 `)
 
 var metadataSchema = schema(`

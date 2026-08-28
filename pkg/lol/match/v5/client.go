@@ -75,6 +75,14 @@ func (c *Client) GetMatch(region, matchID string) (*MatchDto, error) {
 	return &match, nil
 }
 
+func (c *Client) GetTimeline(region, matchID string) (*TimelineDto, error) {
+	var timeline TimelineDto
+	if err := c.get(region, "/lol/match/v5/matches/"+url.PathEscape(matchID)+"/timeline", &timeline); err != nil {
+		return nil, err
+	}
+	return &timeline, nil
+}
+
 func (c *Client) get(region, path string, dst any) error {
 	res, err := c.c.SimpleGet(region, path)
 	if err != nil {
