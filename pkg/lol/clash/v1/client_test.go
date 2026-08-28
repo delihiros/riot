@@ -18,13 +18,13 @@ func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 const (
-	playerJSON     = `{"puuid":"player/one","position":"MIDDLE","role":"CAPTAIN"}`
+	playerJSON     = `{"puuid":"player/one","teamId":"clash-team-8675309","position":"MIDDLE","role":"CAPTAIN"}`
 	teamJSON       = `{"id":"team/one","tournamentId":42,"name":"Example Team","iconId":7,"tier":3,"captain":"player/one","abbreviation":"EX","players":[` + playerJSON + `]}`
 	tournamentJSON = `{"id":42,"themeId":9,"nameKey":"name.primary","nameKeySecondary":"name.secondary","schedule":[{"id":5,"registrationTime":1710000000000,"startTime":1710100000000,"cancelled":true}]}`
 )
 
 func TestClientEndpoints(t *testing.T) {
-	wantPlayer := PlayerDto{PUUID: "player/one", Position: "MIDDLE", Role: "CAPTAIN"}
+	wantPlayer := PlayerDto{PUUID: "player/one", TeamID: "clash-team-8675309", Position: "MIDDLE", Role: "CAPTAIN"}
 	wantTeam := &TeamDto{
 		ID: "team/one", TournamentID: 42, Name: "Example Team", IconID: 7, Tier: 3,
 		Captain: "player/one", Abbreviation: "EX", Players: []PlayerDto{wantPlayer},

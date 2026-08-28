@@ -2,6 +2,7 @@ package v1
 
 type PlayerDto struct {
 	PUUID    string `json:"puuid"`
+	TeamID   string `json:"teamId"`
 	Position string `json:"position"`
 	Role     string `json:"role"`
 }
