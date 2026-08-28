@@ -112,8 +112,8 @@ func TestClientChampionMasteryEndpoints(t *testing.T) {
 	if got := requests[3].URL.Query().Get("count"); got != "0" {
 		t.Errorf("zero count query = %q, want 0", got)
 	}
-	if got := requests[4].URL.Query().Get("count"); got != "" {
-		t.Errorf("nil count query = %q, want omitted", got)
+	if requests[4].URL.Query().Has("count") {
+		t.Errorf("nil count query = %q, want omitted", requests[4].URL.RawQuery)
 	}
 }
 
